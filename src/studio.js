@@ -356,8 +356,26 @@ function updatePreviewMini() {
 
 function updateStudioPriceDisplay() {
   const qty = parseInt(studioSelections['Quantity']) || 100;
-  const base  = PRICING_TABLE.base[qty]  || 9.99;
-  const offer = PRICING_TABLE.offer[qty] || base;
+
+  // Try variant-level pricing first (from uploaded Excel)
+  let base, offer;
+  if (typeof VARIANT_PRICING !== 'undefined' && Object.keys(VARIANT_PRICING).length) {
+    const paper  = (studioSelections['Paper Stock'] || 'Matte').toLowerCase();
+    const corner = (studioSelections['Corners'] || 'Standard').toLowerCase();
+    const sides  = (studioSelections['Print Sides'] || 'Front Only').toLowerCase();
+    const paperCode  = paper.includes('gloss') ? 'GL' : 'MA';
+    const cornerCode = corner.includes('round') ? 'RO' : 'ST';
+    const sidesCode  = sides.includes('back')   ? 'FB' : 'FO';
+    const key = `BC-${paperCode}${cornerCode}${sidesCode}-${qty}`;
+    if (VARIANT_PRICING[key]) {
+      base  = VARIANT_PRICING[key].base;
+      offer = VARIANT_PRICING[key].offer;
+    }
+  }
+  if (!base) {
+    base  = PRICING_TABLE.base[qty]  || 9.99;
+    offer = PRICING_TABLE.offer[qty] || base;
+  }
   const hasOffer = OFFER_ACTIVE && offer < base;
   const disc = Math.round((1 - offer / base) * 100);
 
