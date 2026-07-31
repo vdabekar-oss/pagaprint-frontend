@@ -124,14 +124,16 @@ function renderOptions() {
       const chips = document.createElement('div');
       chips.className = 'chips';
       choices.forEach((c, i) => {
+        // choices can be a plain string OR an object { label, price }
+        const chipLabel = (typeof c === 'object' && c !== null) ? c.label : c;
         const chip = document.createElement('div');
         chip.className = 'chip' + (i === 0 ? ' active' : '');
-        chip.textContent = c;
-        if (i === 0) selections[opt.label] = c;
+        chip.textContent = chipLabel;
+        if (i === 0) selections[opt.label] = chipLabel;
         chip.onclick = () => {
           chips.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
           chip.classList.add('active');
-          selections[opt.label] = c;
+          selections[opt.label] = chipLabel;
           updateLivePrice();
         };
         chips.appendChild(chip);
