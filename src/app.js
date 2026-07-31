@@ -5,6 +5,10 @@
 
 const API = 'http://localhost:4000/api';
 
+// Variant-level pricing loaded from Excel upload
+// Key: variant ID e.g. "BC-MAST-FO-100", Value: { base, offer }
+let VARIANT_PRICING = {};
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let cart = [];                // { id, product_id, product_name, emoji, options_label, unit_price, selections }
 let currentProduct = null;   // full product object from API
@@ -197,9 +201,41 @@ function renderOptions() {
 }
 
 function updateLivePrice() {
-  const price = (selections['_price'] || currentProduct.base_price || 0).toFixed(2);
+  let price;
+  if (currentProduct && currentProduct.id === 'business-cards') {
+    price = getVariantPrice();
+  } else {
+    price = selections['_price'] || (currentProduct && currentProduct.base_price) || 0;
+  }
+  price = parseFloat(price).toFixed(2);
   document.getElementById('live-price').textContent = price;
-  document.getElementById('add-price').textContent = price;
+  const addPriceEl = document.getElementById('add-price');
+  if (addPriceEl) addPriceEl.textContent = price;
+}
+
+// Look up price from PRICING_TABLE using all selected options
+function getVariantPrice() {
+  const qty   = parseInt((selections['Quantity'] || '100').toString().replace(/[^0-9]/g,'')) || 100;
+  const paper = (selections['Paper Stock'] || 'Matte').toLowerCase();
+  const corner= (selections['Corners'] || 'Standard').toLowerCase();
+  const sides = (selections['Print Sides'] || 'Front Only').toLowerCase();
+
+  // Build variant key matching Excel: BC-[MA/GL]-[ST/RO]-[FO/FB]-[qty]
+  const paperCode  = paper.includes('gloss') ? 'GL' : 'MA';
+  const cornerCode = corner.includes('round') ? 'RO' : 'ST';
+  const sidesCode  = sides.includes('back')   ? 'FB' : 'FO';
+  const variantKey = `BC-${paperCode}${cornerCode}${sidesCode}-${qty}`;
+
+  // Check variant-level pricing table first
+  if (VARIANT_PRICING[variantKey]) {
+    const v = VARIANT_PRICING[variantKey];
+    return (OFFER_ACTIVE && v.offer && v.offer < v.base) ? v.offer : v.base;
+  }
+
+  // Fall back to qty-only pricing from PRICING_TABLE
+  const base  = PRICING_TABLE.base[qty]  || 9.99;
+  const offer = PRICING_TABLE.offer[qty] || base;
+  return (OFFER_ACTIVE && offer < base) ? offer : base;
 }
 
 function updatePreview() {
@@ -658,25 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // STUDIO INTEGRATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Override addToCart for business cards — go to Studio instead
-const _origAddToCart = addToCart;
-function addToCart() {
-  if (currentProduct && currentProduct.id === 'business-cards') {
-    // Collect current selections
-    const sel = {};
-    (currentProduct.options || []).forEach(opt => {
-      if (selections[opt.label]) sel[opt.label] = selections[opt.label];
-    });
-    // Also grab qty label
-    if (selections['Quantity']) sel['Quantity'] = selections['Quantity'].replace(' cards','').replace(/,/g,'');
-    openStudio(sel);
-  } else {
-    _origAddToCart();
-  }
-}
-
-// Update button label after customizer opens for business cards
-// (done inside renderOptions via a post-render hook — no override needed)
+// Update button label for business cards vs other products
 function updateCartBtnForProduct(productId) {
   const btn = document.getElementById('add-cart-btn');
   if (!btn) return;
@@ -687,6 +705,37 @@ function updateCartBtnForProduct(productId) {
     btn.innerHTML = 'Add to cart — $<span id="add-price">0.00</span>';
     btn.style.background = '';
     updateLivePrice();
+  }
+}
+
+// addToCart — routes business cards to Studio, others direct to cart
+function addToCart() {
+  if (currentProduct && currentProduct.id === 'business-cards') {
+    const sel = {};
+    (currentProduct.options || []).forEach(opt => {
+      if (selections[opt.label]) sel[opt.label] = selections[opt.label];
+    });
+    if (selections['Quantity']) sel['Quantity'] = String(selections['Quantity']).replace(' cards','').replace(/,/g,'');
+    openStudio(sel);
+  } else {
+    // non-business-card products go straight to cart
+    if (!currentProduct) return;
+    const price = parseFloat(selections['_price'] || currentProduct.base_price);
+    const optLabel = Object.entries(selections)
+      .filter(([k]) => !k.startsWith('_') && !['Your name (preview)', 'Job title (preview)'].includes(k))
+      .map(([, v]) => v).join(' · ');
+    cart.push({
+      id: Date.now(),
+      product_id: currentProduct.id,
+      product_name: currentProduct.name,
+      emoji: currentProduct.emoji || '📦',
+      options_label: optLabel || 'Standard options',
+      unit_price: price,
+      selections: { ...selections }
+    });
+    updateCartBadge();
+    showToast('✓ Added to cart!');
+    showPage('cart');
   }
 }
 
@@ -710,6 +759,31 @@ function handlePricingUpload(input) {
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
       // Skip header rows (first 4 rows are title/header)
       const dataRows = rows.slice(4).filter(r => r[0] && r[4]);
+
+      // Build VARIANT_PRICING from Excel rows
+      // Columns: [0]=VariantID [1]=Paper [2]=Corners [3]=Sides [4]=Qty [5]=BasePrice [6]=OfferPrice [8]=Active
+      VARIANT_PRICING = {};
+      let loadedBase = {}, loadedOffer = {};
+      dataRows.forEach(row => {
+        const variantId = String(row[0] || '').trim();
+        const qty       = parseInt(row[4]) || 0;
+        const base      = parseFloat(row[5]) || 0;
+        const offer     = parseFloat(row[6]) || 0;
+        const active    = String(row[8] || 'YES').toUpperCase().trim();
+        if (!variantId || !qty || !base || active === 'NO') return;
+        VARIANT_PRICING[variantId] = { base, offer: offer > 0 ? offer : base };
+        // Also update qty-level fallback (use lowest base per qty)
+        if (!loadedBase[qty] || base < loadedBase[qty]) loadedBase[qty] = base;
+        if (offer > 0 && (!loadedOffer[qty] || offer < loadedOffer[qty])) loadedOffer[qty] = offer;
+      });
+
+      // Update the qty-level fallback table too
+      if (Object.keys(loadedBase).length) {
+        PRICING_TABLE.base  = loadedBase;
+        PRICING_TABLE.offer = Object.keys(loadedOffer).length ? loadedOffer : loadedBase;
+        OFFER_ACTIVE = Object.keys(loadedOffer).some(q => loadedOffer[q] < loadedBase[q]);
+      }
+
       if (typeof loadPricingFromUpload === 'function') {
         loadPricingFromUpload(dataRows);
       }
