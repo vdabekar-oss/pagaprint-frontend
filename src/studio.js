@@ -359,7 +359,7 @@ function updateStudioPriceDisplay() {
 
   // Try variant-level pricing first (from uploaded Excel)
   let base, offer;
-  if (typeof VARIANT_PRICING !== 'undefined' && Object.keys(VARIANT_PRICING).length) {
+  if (typeof window.VARIANT_PRICING !== 'undefined' && Object.keys(window.VARIANT_PRICING).length) {
     const paper  = (studioSelections['Paper Stock'] || 'Matte').toLowerCase();
     const corner = (studioSelections['Corners'] || 'Standard').toLowerCase();
     const sides  = (studioSelections['Print Sides'] || 'Front Only').toLowerCase();
@@ -367,9 +367,9 @@ function updateStudioPriceDisplay() {
     const cornerCode = corner.includes('round') ? 'RO' : 'ST';
     const sidesCode  = sides.includes('back')   ? 'FB' : 'FO';
     const key = `BC-${paperCode}${cornerCode}${sidesCode}-${qty}`;
-    if (VARIANT_PRICING[key]) {
-      base  = VARIANT_PRICING[key].base;
-      offer = VARIANT_PRICING[key].offer;
+    if (window.VARIANT_PRICING[key]) {
+      base  = window.VARIANT_PRICING[key].base;
+      offer = window.VARIANT_PRICING[key].offer;
     }
   }
   if (!base) {
