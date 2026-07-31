@@ -178,9 +178,9 @@ function addTextField(type, defaultText, fontSize, bold) {
   const el = {
     id: studioNextTextId++,
     type,
-    text: defaultText,
-    x: 30,
-    y: 30 + (studioTextElements.length * 22),
+    text: type === 'custom' ? '' : defaultText,  // custom starts blank
+    x: 40,
+    y: 30 + (studioTextElements.length * 26),
     fontSize,
     bold,
     color: canvasBg === '#ffffff' || canvasBg === '#f5f5dc' ? '#111827' : '#ffffff'
@@ -188,6 +188,80 @@ function addTextField(type, defaultText, fontSize, bold) {
   studioTextElements.push(el);
   renderTextLayer();
   selectTextElement(el.id);
+
+  // For custom type (and all types): show inline edit popover immediately
+  showInlineEditor(el.id);
+}
+
+function showInlineEditor(id) {
+  // Remove any existing inline editor
+  const existing = document.getElementById('studio-inline-editor');
+  if (existing) existing.remove();
+
+  const el = studioTextElements.find(e => e.id === id);
+  if (!el) return;
+  const canvas = document.getElementById('studio-canvas');
+  if (!canvas) return;
+
+  const popover = document.createElement('div');
+  popover.id = 'studio-inline-editor';
+  popover.style.cssText = `
+    position: absolute;
+    left: ${Math.min(el.x, canvas.offsetWidth - 260)}px;
+    top: ${Math.max(0, el.y - 50)}px;
+    background: #1f2937;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    min-width: 240px;
+  `;
+
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = el.text;
+  inp.placeholder = 'Type here...';
+  inp.style.cssText = `
+    flex: 1; padding: 6px 10px; border-radius: 6px;
+    border: none; font-size: 13px; font-family: inherit;
+    background: #374151; color: #fff; outline: none;
+    min-width: 0;
+  `;
+  inp.oninput = () => {
+    el.text = inp.value;
+    const domEl = document.getElementById('studio-el-' + el.id);
+    if (domEl) domEl.textContent = inp.value || ' ';
+    // also update side panel if open
+    const sideInp = document.getElementById('studio-text-value');
+    if (sideInp) sideInp.value = inp.value;
+    updatePreviewMini();
+  };
+
+  const doneBtn = document.createElement('button');
+  doneBtn.textContent = 'Done';
+  doneBtn.style.cssText = `
+    padding: 6px 12px; background: #0070ba; color: #fff;
+    border: none; border-radius: 6px; font-size: 12px;
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+  `;
+  doneBtn.onclick = () => { popover.remove(); updatePreviewMini(); };
+
+  popover.appendChild(inp);
+  popover.appendChild(doneBtn);
+
+  // Place popover relative to canvas container
+  const canvasOuter = canvas.parentElement;
+  canvasOuter.style.position = 'relative';
+  canvasOuter.appendChild(popover);
+
+  // Auto-focus the input
+  setTimeout(() => inp.focus(), 50);
+
+  // Close on Enter key
+  inp.onkeydown = (e) => { if (e.key === 'Enter') { popover.remove(); updatePreviewMini(); } };
 }
 
 function renderTextLayer() {
