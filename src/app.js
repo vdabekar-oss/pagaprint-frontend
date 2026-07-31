@@ -9,6 +9,17 @@ const API = 'http://localhost:4000/api';
 // Key: variant ID e.g. "BC-MASTFO-100", Value: { base, offer }
 window.VARIANT_PRICING = {};
 
+// Pricing tables — window globals so studio.js can access them
+window.PRICING_TABLE = {
+  base:  { 100: 9.99,  300: 22.99, 500: 34.99, 1000: 59.99 },
+  offer: { 100: 7.99,  300: 18.39, 500: 27.99, 1000: 47.99 }
+};
+window.OFFER_ACTIVE = true;
+
+// Shorthand references used throughout app.js
+let PRICING_TABLE = window.PRICING_TABLE;
+let OFFER_ACTIVE  = window.OFFER_ACTIVE;
+
 // ── State ─────────────────────────────────────────────────────────────────────
 // Restore saved pricing from localStorage on page load
 (function restorePricing() {
@@ -26,11 +37,12 @@ window.VARIANT_PRICING = {};
     }
     if (savedTable) {
       const t = JSON.parse(savedTable);
-      PRICING_TABLE.base  = t.base  || PRICING_TABLE.base;
-      PRICING_TABLE.offer = t.offer || PRICING_TABLE.offer;
+      window.PRICING_TABLE.base  = t.base  || window.PRICING_TABLE.base;
+      window.PRICING_TABLE.offer = t.offer || window.PRICING_TABLE.offer;
     }
     if (savedOffer !== null) {
-      OFFER_ACTIVE = savedOffer === 'true';
+      window.OFFER_ACTIVE = savedOffer === 'true';
+      OFFER_ACTIVE        = window.OFFER_ACTIVE;
     }
   } catch(e) { console.warn('Could not restore pricing:', e); }
 })();
@@ -836,9 +848,11 @@ function handlePricingUpload(input) {
 
       // Update qty-level fallback table
       if (Object.keys(loadedBase).length) {
-        PRICING_TABLE.base  = loadedBase;
-        PRICING_TABLE.offer = Object.keys(loadedOffer).length ? loadedOffer : loadedBase;
-        OFFER_ACTIVE        = Object.keys(loadedOffer).some(q => loadedOffer[q] < loadedBase[q]);
+        window.PRICING_TABLE.base  = loadedBase;
+        window.PRICING_TABLE.offer = Object.keys(loadedOffer).length ? loadedOffer : loadedBase;
+        window.OFFER_ACTIVE        = Object.keys(loadedOffer).some(q => loadedOffer[q] < loadedBase[q]);
+        PRICING_TABLE = window.PRICING_TABLE;
+        OFFER_ACTIVE  = window.OFFER_ACTIVE;
       }
 
       if (loaded > 0) {
