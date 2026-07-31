@@ -407,7 +407,7 @@ function renderCart() {
   `).join('');
 
   const subtotal = cart.reduce((s, i) => s + i.unit_price, 0);
-  const shipping = subtotal >= 75 ? 0 : 6.99;
+  const shipping = subtotal >= 150 ? 0 : 6.99;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
@@ -419,9 +419,9 @@ function renderCart() {
       <div class="sum-row"><span>Sales tax (est. 8%)</span><span>$${tax.toFixed(2)}</span></div>
       <div class="sum-total"><span>Total</span><span>$${total.toFixed(2)}</span></div>
       <p class="ship-nudge">${
-        subtotal >= 75
+        subtotal >= 150
           ? '🎉 You qualify for free shipping!'
-          : `Add $${(75 - subtotal).toFixed(2)} more for free shipping`
+          : `Add $${(150 - subtotal).toFixed(2)} more for free shipping`
       }</p>
       <div class="paypal-divider">pay securely with</div>
       <button class="btn-paypal" onclick="startCheckout(${total.toFixed(2)})">
@@ -570,9 +570,11 @@ async function loadAdmin() {
       <td style="color:#6b7280;font-size:13px">${opts}</td>
       <td>$${price}</td>
       <td><span class="status-pill ${statusCls}">${p.status}</span></td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">
+      <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <button class="tbl-btn" style="color:var(--blue);border-color:var(--blue);font-weight:600"
           onclick="openProductEditor('${p.id}')">Edit options</button>
+        <button class="tbl-btn" style="color:#0070ba;border-color:#93c5fd"
+          onclick="uploadPricingSheet('${p.id}')">📊 Pricing</button>
         <button class="tbl-btn" onclick="toggleProductStatus('${p.id}','${toggleStatus}')">
           ${toggleLabel}
         </button>
@@ -788,7 +790,10 @@ function addToCart() {
 // ─────────────────────────────────────────────────────────────────────────────
 // PRICING SHEET UPLOAD (admin panel)
 // ─────────────────────────────────────────────────────────────────────────────
-function uploadPricingSheet() {
+let _uploadingForProduct = null;
+
+function uploadPricingSheet(productId) {
+  _uploadingForProduct = productId || 'business-cards';
   document.getElementById('pricing-file-input').click();
 }
 
@@ -808,8 +813,17 @@ function handlePricingUpload(input) {
       console.log('Excel total rows:', rows.length);
       console.log('Row 4 sample (first data row):', rows[4]);
 
-      // Reset global pricing tables
-      window.VARIANT_PRICING = {};
+      // Product-specific reset — only clear variants for this product
+      const productId = _uploadingForProduct || 'business-cards';
+      const prefix    = productId === 'business-cards' ? 'BC-' :
+                        productId === 'sheet-stickers' ? 'SS-' :
+                        productId === 'banners'        ? 'BN-' :
+                        productId.slice(0,2).toUpperCase() + '-';
+      Object.keys(window.VARIANT_PRICING).forEach(k => {
+        if (k.startsWith(prefix)) delete window.VARIANT_PRICING[k];
+      });
+      console.log('Uploading pricing for:', productId, '(prefix:', prefix + ')');
+
       const loadedBase  = {};
       const loadedOffer = {};
       let   loaded      = 0;
@@ -859,12 +873,12 @@ function handlePricingUpload(input) {
         // Save to localStorage so pricing survives page navigation
         try {
           localStorage.setItem('pp_variant_pricing', JSON.stringify(window.VARIANT_PRICING));
-          localStorage.setItem('pp_pricing_table', JSON.stringify(PRICING_TABLE));
-          localStorage.setItem('pp_offer_active', String(OFFER_ACTIVE));
+          localStorage.setItem(`pp_pricing_table_${productId}`, JSON.stringify({ base: window.PRICING_TABLE.base, offer: window.PRICING_TABLE.offer }));
+          localStorage.setItem('pp_offer_active', String(window.OFFER_ACTIVE));
           console.log('✅ Saved', loaded, 'variants to localStorage');
         } catch(e) { console.warn('Could not save to localStorage:', e); }
 
-        showToast(`✅ ${loaded} variants loaded! Pricing is now active.`);
+        showToast(`✅ ${loaded} variants loaded for ${productId}!`);
         if (currentProduct && currentProduct.id === 'business-cards') updateLivePrice();
       } else {
         showToast('⚠️ No variants found. Check the Excel file format.');
