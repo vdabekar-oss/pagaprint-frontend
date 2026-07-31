@@ -101,6 +101,7 @@ async function openCustomizer(productId) {
   renderOptions();
   updateLivePrice();
   updatePreview();
+  updateCartBtnForProduct(productId);
   showPage('customize');
 }
 
@@ -672,16 +673,18 @@ function addToCart() {
   }
 }
 
-// Update the "Add to cart" button label for business cards
-const _origOpenCustomizer = openCustomizer;
-async function openCustomizer(productId) {
-  await _origOpenCustomizer(productId);
+// Update button label after customizer opens for business cards
+// (done inside renderOptions via a post-render hook — no override needed)
+function updateCartBtnForProduct(productId) {
+  const btn = document.getElementById('add-cart-btn');
+  if (!btn) return;
   if (productId === 'business-cards') {
-    const btn = document.getElementById('add-cart-btn');
-    if (btn) {
-      btn.innerHTML = 'Continue to Studio →';
-      btn.style.background = '#0070ba';
-    }
+    btn.innerHTML = 'Continue to Studio →';
+    btn.style.background = '#0070ba';
+  } else {
+    btn.innerHTML = 'Add to cart — $<span id="add-price">0.00</span>';
+    btn.style.background = '';
+    updateLivePrice();
   }
 }
 
