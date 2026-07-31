@@ -11,12 +11,7 @@ let studioNextTextId = 1;
 let studioDragging = null;
 let studioDragOffset = { x: 0, y: 0 };
 
-// Pricing from uploaded sheet (or defaults)
-let PRICING_TABLE = {
-  base:  { 100: 9.99, 300: 22.99, 500: 34.99, 1000: 59.99 },
-  offer: { 100: 7.99, 300: 18.39, 500: 27.99, 1000: 47.99 }
-};
-let OFFER_ACTIVE = true;
+// PRICING_TABLE and OFFER_ACTIVE are declared as window globals in app.js
 
 function openStudio(selections) {
   studioSelections = selections;
