@@ -10,6 +10,31 @@ const API = 'http://localhost:4000/api';
 window.VARIANT_PRICING = {};
 
 // ── State ─────────────────────────────────────────────────────────────────────
+// Restore saved pricing from localStorage on page load
+(function restorePricing() {
+  try {
+    const savedVariants = localStorage.getItem('pp_variant_pricing');
+    const savedTable    = localStorage.getItem('pp_pricing_table');
+    const savedOffer    = localStorage.getItem('pp_offer_active');
+
+    if (savedVariants) {
+      const parsed = JSON.parse(savedVariants);
+      if (Object.keys(parsed).length > 0) {
+        window.VARIANT_PRICING = parsed;
+        console.log('✅ Restored', Object.keys(parsed).length, 'variants from localStorage');
+      }
+    }
+    if (savedTable) {
+      const t = JSON.parse(savedTable);
+      PRICING_TABLE.base  = t.base  || PRICING_TABLE.base;
+      PRICING_TABLE.offer = t.offer || PRICING_TABLE.offer;
+    }
+    if (savedOffer !== null) {
+      OFFER_ACTIVE = savedOffer === 'true';
+    }
+  } catch(e) { console.warn('Could not restore pricing:', e); }
+})();
+
 let cart = [];                // { id, product_id, product_name, emoji, options_label, unit_price, selections }
 let currentProduct = null;   // full product object from API
 let selections = {};         // current customizer selections
@@ -817,8 +842,15 @@ function handlePricingUpload(input) {
       }
 
       if (loaded > 0) {
-        showToast(`✅ ${loaded} variants loaded! Pricing updated.`);
-        // Refresh price display if customizer is open
+        // Save to localStorage so pricing survives page navigation
+        try {
+          localStorage.setItem('pp_variant_pricing', JSON.stringify(window.VARIANT_PRICING));
+          localStorage.setItem('pp_pricing_table', JSON.stringify(PRICING_TABLE));
+          localStorage.setItem('pp_offer_active', String(OFFER_ACTIVE));
+          console.log('✅ Saved', loaded, 'variants to localStorage');
+        } catch(e) { console.warn('Could not save to localStorage:', e); }
+
+        showToast(`✅ ${loaded} variants loaded! Pricing is now active.`);
         if (currentProduct && currentProduct.id === 'business-cards') updateLivePrice();
       } else {
         showToast('⚠️ No variants found. Check the Excel file format.');
