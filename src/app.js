@@ -5,9 +5,9 @@
 
 const API = 'http://localhost:4000/api';
 
-// Variant-level pricing loaded from Excel upload
-// Key: variant ID e.g. "BC-MAST-FO-100", Value: { base, offer }
-let VARIANT_PRICING = {};
+// Variant-level pricing loaded from Excel upload — window global so studio.js can access it
+// Key: variant ID e.g. "BC-MASTFO-100", Value: { base, offer }
+window.VARIANT_PRICING = {};
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let cart = [];                // { id, product_id, product_name, emoji, options_label, unit_price, selections }
@@ -230,11 +230,11 @@ function getVariantPrice() {
   const sidesCode  = (sides.includes('back') || sides.includes('front & back') || sides.includes('both')) ? 'FB' : 'FO';
   const variantKey = `BC-${paperCode}${cornerCode}${sidesCode}-${qty}`;
 
-  console.log('Variant lookup:', variantKey, '| VARIANT_PRICING keys:', Object.keys(VARIANT_PRICING).length);
+  console.log('Variant lookup:', variantKey, '| VARIANT_PRICING keys:', Object.keys(window.VARIANT_PRICING).length);
 
   // Check variant-level pricing table first (populated from uploaded Excel)
-  if (VARIANT_PRICING[variantKey]) {
-    const v = VARIANT_PRICING[variantKey];
+  if (window.VARIANT_PRICING[variantKey]) {
+    const v = window.VARIANT_PRICING[variantKey];
     const price = (OFFER_ACTIVE && v.offer && v.offer < v.base) ? v.offer : v.base;
     console.log('Variant price found:', price);
     return price;
@@ -763,42 +763,70 @@ function handlePricingUpload(input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      // Skip header rows (first 4 rows are title/header)
-      const dataRows = rows.slice(4).filter(r => r[0] && r[4]);
+      const wb   = XLSX.read(e.target.result, { type: 'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      // Read all rows as raw values
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
 
-      // Build VARIANT_PRICING from Excel rows
-      // Columns: [0]=VariantID [1]=Paper [2]=Corners [3]=Sides [4]=Qty [5]=BasePrice [6]=OfferPrice [8]=Active
-      VARIANT_PRICING = {};
-      let loadedBase = {}, loadedOffer = {};
-      dataRows.forEach(row => {
+      console.log('Excel total rows:', rows.length);
+      console.log('Row 4 sample (first data row):', rows[4]);
+
+      // Reset global pricing tables
+      window.VARIANT_PRICING = {};
+      const loadedBase  = {};
+      const loadedOffer = {};
+      let   loaded      = 0;
+
+      // Data starts at row index 4 (rows 0-3 are title/headers)
+      rows.slice(4).forEach((row, i) => {
+        // Skip completely empty rows
+        if (!row || row.every(c => c === null || c === '')) return;
+
         const variantId = String(row[0] || '').trim();
-        const qty       = parseInt(row[4]) || 0;
-        const base      = parseFloat(row[5]) || 0;
-        const offer     = parseFloat(row[6]) || 0;
-        const active    = String(row[8] || 'YES').toUpperCase().trim();
-        if (!variantId || !qty || !base || active === 'NO') return;
-        VARIANT_PRICING[variantId] = { base, offer: offer > 0 ? offer : base };
-        // Also update qty-level fallback (use lowest base per qty)
-        if (!loadedBase[qty] || base < loadedBase[qty]) loadedBase[qty] = base;
-        if (offer > 0 && (!loadedOffer[qty] || offer < loadedOffer[qty])) loadedOffer[qty] = offer;
+        const qty       = parseInt(row[4])     || 0;
+        const base      = parseFloat(row[5])   || 0;
+        const offer     = parseFloat(row[6])   || 0;
+        const active    = String(row[8] !== null && row[8] !== undefined ? row[8] : 'YES').toUpperCase().trim();
+
+        console.log(`Row ${i + 5}: id=${variantId} qty=${qty} base=${base} offer=${offer} active=${active}`);
+
+        if (!variantId.startsWith('BC-')) return; // skip non-product rows
+        if (!qty || !base)                return; // skip if missing key fields
+        if (active === 'NO')              return; // skip inactive
+
+        window.VARIANT_PRICING[variantId] = {
+          base:  base,
+          offer: (offer > 0 && offer < base) ? offer : base
+        };
+        loaded++;
+
+        // Build qty-level fallback (cheapest base/offer per qty across all variants)
+        if (!loadedBase[qty] || base < loadedBase[qty])   loadedBase[qty]  = base;
+        if (offer > 0 && offer < base) {
+          if (!loadedOffer[qty] || offer < loadedOffer[qty]) loadedOffer[qty] = offer;
+        }
       });
 
-      // Update the qty-level fallback table too
+      console.log('Loaded variants:', loaded, '| VARIANT_PRICING:', window.VARIANT_PRICING);
+
+      // Update qty-level fallback table
       if (Object.keys(loadedBase).length) {
         PRICING_TABLE.base  = loadedBase;
         PRICING_TABLE.offer = Object.keys(loadedOffer).length ? loadedOffer : loadedBase;
-        OFFER_ACTIVE = Object.keys(loadedOffer).some(q => loadedOffer[q] < loadedBase[q]);
+        OFFER_ACTIVE        = Object.keys(loadedOffer).some(q => loadedOffer[q] < loadedBase[q]);
       }
 
-      if (typeof loadPricingFromUpload === 'function') {
-        loadPricingFromUpload(dataRows);
+      if (loaded > 0) {
+        showToast(`✅ ${loaded} variants loaded! Pricing updated.`);
+        // Refresh price display if customizer is open
+        if (currentProduct && currentProduct.id === 'business-cards') updateLivePrice();
+      } else {
+        showToast('⚠️ No variants found. Check the Excel file format.');
       }
-      showToast(`✅ Pricing updated — ${dataRows.length} variants loaded`);
+
     } catch(err) {
-      showToast('❌ Could not read file. Make sure it is the PagaPrint variants Excel.');
+      console.error('Pricing upload error:', err);
+      showToast('❌ Could not read file. Use the PagaPrint variants Excel.');
     }
   };
   reader.readAsArrayBuffer(file);
