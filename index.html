@@ -12,28 +12,34 @@
 </head>
 <body>
 
-  <!-- NAV -->
+  <!-- OFFER BANNER -->
+  <div class="offer-banner" id="offer-banner">
+    <span class="offer-tag">🎉 Limited offer</span>
+    <span>Get <strong>20% off</strong> all business cards this week — use code <strong>PRINT20</strong></span>
+    <a onclick="scrollToProducts()">Shop now →</a>
+    <button class="offer-banner-close" onclick="document.getElementById('offer-banner').style.display='none'" aria-label="Close">✕</button>
+  </div>
+
+  <!-- NAV — customer facing, no admin link -->
   <nav class="nav" id="nav">
     <div class="nav-inner">
       <div class="logo" onclick="showPage('home')">Paga<span>Print</span></div>
       <div class="nav-links">
         <a onclick="showPage('home')">Products</a>
         <a onclick="showPage('home')">How it works</a>
-        <a onclick="showPage('admin')">Admin</a>
+        <a onclick="showPage('home')">About</a>
       </div>
       <div class="nav-right">
         <button class="cart-btn" onclick="showPage('cart')">
           🛒 Cart <span class="cart-badge" id="cart-badge">0</span>
         </button>
-        <button class="btn-primary nav-cta" onclick="showPage('home')">Order now</button>
+        <button class="btn-primary nav-cta" onclick="scrollToProducts()">Order now</button>
       </div>
     </div>
   </nav>
 
-  <!-- PAGES -->
+  <!-- HOME PAGE -->
   <div id="page-home" class="page active">
-
-    <!-- HERO -->
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-eyebrow">🇺🇸 Free shipping on orders over $75</div>
@@ -41,7 +47,7 @@
         <p class="hero-sub">Business cards, stickers, and banners — fully customized and delivered fast across the US.</p>
         <div class="hero-actions">
           <button class="btn-primary lg" onclick="scrollToProducts()">Start designing</button>
-          <button class="btn-ghost lg" onclick="showPage('admin')">Admin panel</button>
+          <button class="btn-ghost lg" onclick="showPage('home')">See all products</button>
         </div>
         <div class="trust-pills">
           <span>✓ 100% satisfaction guarantee</span>
@@ -58,19 +64,15 @@
       </div>
     </section>
 
-    <!-- PRODUCTS -->
     <section class="products-section" id="products">
       <div class="container">
         <div class="section-eyebrow">Our products</div>
         <h2 class="section-title">Everything your brand needs</h2>
-        <p class="section-sub">Choose a product to start customizing — pricing updates live based on your options.</p>
-        <div class="product-grid" id="product-grid">
-          <!-- Loaded from API / fallback -->
-        </div>
+        <p class="section-sub">Choose a product to start customizing — pricing updates live.</p>
+        <div class="product-grid" id="product-grid"></div>
       </div>
     </section>
 
-    <!-- HOW IT WORKS -->
     <section class="how-section">
       <div class="container">
         <div class="section-eyebrow">How it works</div>
@@ -78,13 +80,12 @@
         <div class="steps-grid">
           <div class="step"><div class="step-num">1</div><h3>Pick your product</h3><p>Choose from business cards, stickers, or banners.</p></div>
           <div class="step"><div class="step-num">2</div><h3>Customize it</h3><p>Select size, finish, paper, quantity — pricing updates live.</p></div>
-          <div class="step"><div class="step-num">3</div><h3>Upload your design</h3><p>Upload your artwork or use one of our free templates.</p></div>
-          <div class="step"><div class="step-num">4</div><h3>Pay with PayPal</h3><p>Secure checkout — no account needed. Delivered in 3–5 days.</p></div>
+          <div class="step"><div class="step-num">3</div><h3>Design in Studio</h3><p>Upload artwork or add text in our live design studio.</p></div>
+          <div class="step"><div class="step-num">4</div><h3>Pay with PayPal</h3><p>Secure checkout. Delivered in 3–5 business days.</p></div>
         </div>
       </div>
     </section>
 
-    <!-- FOOTER -->
     <footer class="footer">
       <div class="container footer-inner">
         <div class="logo" style="cursor:default">Paga<span>Print</span></div>
@@ -92,6 +93,7 @@
           <a href="#">Privacy</a>
           <a href="#">Terms</a>
           <a href="#">Contact</a>
+          <a onclick="showAdminLogin()" style="color:var(--text-3);font-size:12px">Admin</a>
         </div>
         <div class="footer-copy">© 2025 PagaPrint LLC · Made in the USA 🇺🇸</div>
       </div>
@@ -107,7 +109,6 @@
         <span id="bread-name">Customize</span>
       </div>
       <div class="customize-layout">
-        <!-- Options -->
         <div class="options-col">
           <h2 class="customize-title" id="customize-title">Business Cards</h2>
           <p class="customize-desc" id="customize-desc"></p>
@@ -116,7 +117,6 @@
             Add to cart — $<span id="add-price">9.99</span>
           </button>
         </div>
-        <!-- Preview -->
         <div class="preview-col">
           <div class="preview-card">
             <div class="preview-label">Live preview</div>
@@ -127,8 +127,7 @@
                 <div class="pm-contact" id="pm-contact">hello@yoursite.com · (555) 000-0000</div>
               </div>
             </div>
-            <div class="preview-note">Preview is approximate. Final print may vary slightly.</div>
-
+            <div class="preview-note">Preview is approximate.</div>
             <div class="price-summary">
               <div>
                 <div class="price-label">Total</div>
@@ -136,13 +135,9 @@
               </div>
               <div class="price-big">$<span id="live-price">9.99</span></div>
             </div>
-
-            <button class="btn-upload" id="upload-btn">
-              📁 Upload your design file
-            </button>
+            <button class="btn-upload" id="upload-btn">📁 Upload your design file</button>
             <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.svg,.pdf" style="display:none" onchange="handleFileUpload(this)" />
             <div id="upload-status" class="upload-status" style="display:none"></div>
-
             <div class="preview-badges">
               <span class="badge-pill">✓ Free proof</span>
               <span class="badge-pill">✓ Tax included</span>
@@ -153,6 +148,9 @@
       </div>
     </div>
   </div>
+
+  <!-- STUDIO PAGE -->
+  <div id="page-studio" class="page"></div>
 
   <!-- CART PAGE -->
   <div id="page-cart" class="page">
@@ -165,12 +163,7 @@
     </div>
   </div>
 
-  <!-- STUDIO PAGE -->
-  <div id="page-studio" class="page">
-    <!-- Rendered dynamically by studio.js -->
-  </div>
-
-  <!-- CHECKOUT SUCCESS PAGE -->
+  <!-- SUCCESS PAGE -->
   <div id="page-success" class="page">
     <div class="container success-container">
       <div class="success-icon">✅</div>
@@ -181,32 +174,60 @@
     </div>
   </div>
 
-  <!-- ADMIN PAGE -->
+  <!-- ADMIN LOGIN PAGE -->
+  <div id="page-admin-login" class="page">
+    <div class="admin-login-wrap">
+      <div class="admin-login-box">
+        <div class="logo">Paga<span>Print</span></div>
+        <h2>Admin panel</h2>
+        <p>Sign in to manage your products and orders</p>
+        <div id="admin-login-error" class="admin-login-error">Incorrect password. Please try again.</div>
+        <div class="admin-login-fields">
+          <input type="text" id="admin-user" class="form-input" placeholder="Username" />
+          <input type="password" id="admin-pass" class="form-input" placeholder="Password"
+            onkeydown="if(event.key==='Enter')checkAdminLogin()" />
+        </div>
+        <button class="btn-primary full" onclick="checkAdminLogin()">Sign in</button>
+        <div style="margin-top:1rem">
+          <a onclick="showPage('home')" style="font-size:13px;color:var(--text-2)">← Back to store</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL PAGE -->
   <div id="page-admin" class="page">
+    <div class="nav" style="position:relative;border-bottom:2px solid var(--blue)">
+      <div class="nav-inner">
+        <div class="logo">Paga<span>Print</span> <span style="font-size:12px;font-weight:500;color:var(--text-2);margin-left:8px">Admin</span></div>
+        <div class="nav-links">
+          <a onclick="loadAdmin()">Dashboard</a>
+        </div>
+        <div class="nav-right">
+          <button class="admin-logout-btn" onclick="adminLogout()">Sign out</button>
+        </div>
+      </div>
+    </div>
     <div class="container admin-container">
       <div class="admin-header">
         <div>
-          <h2 class="page-title">Admin panel</h2>
-          <p class="admin-sub">Manage your products, options, and orders</p>
+          <h2 class="page-title" style="margin-bottom:4px">Dashboard</h2>
+          <p class="admin-sub">Manage your products, pricing, and orders</p>
         </div>
         <button class="btn-primary" onclick="showAddProductModal()">+ Add product</button>
       </div>
-
-      <!-- Stats -->
       <div class="stats-grid" id="stats-grid">
         <div class="stat-card"><div class="stat-label">Total orders</div><div class="stat-val" id="stat-orders">—</div></div>
         <div class="stat-card"><div class="stat-label">Revenue this month</div><div class="stat-val" id="stat-revenue">—</div></div>
         <div class="stat-card"><div class="stat-label">Active products</div><div class="stat-val" id="stat-products">—</div></div>
         <div class="stat-card"><div class="stat-label">Pending orders</div><div class="stat-val" id="stat-pending">—</div></div>
       </div>
-
-      <!-- Products table -->
       <div class="admin-section">
         <div class="admin-section-header">
           <h3>Products</h3>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span class="table-note">All prices in USD</span>
-            <button class="tbl-btn" style="color:#0070ba;border-color:#0070ba;font-weight:600;font-size:12px"
+            <button class="tbl-btn" style="color:var(--blue);border-color:var(--blue);font-weight:600;font-size:12px"
               onclick="uploadPricingSheet()">📊 Upload pricing sheet</button>
           </div>
         </div>
@@ -217,8 +238,6 @@
           </table>
         </div>
       </div>
-
-      <!-- Orders table -->
       <div class="admin-section">
         <div class="admin-section-header"><h3>Recent orders</h3></div>
         <div class="table-wrap">
@@ -227,41 +246,6 @@
             <tbody id="orders-tbody"></tbody>
           </table>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PRICING UPLOAD SECTION (inside admin, added dynamically) -->
-  <!-- trigger via uploadPricingSheet() -->
-  <input type="file" id="pricing-file-input" accept=".xlsx" style="display:none" onchange="handlePricingUpload(this)">
-
-  <!-- ADD PRODUCT MODAL -->
-  <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="closeModal(event)">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Add new product</h3>
-        <button class="modal-close" onclick="document.getElementById('modal-overlay').style.display='none'">✕</button>
-      </div>
-      <div class="modal-body">
-        <label>Product ID (no spaces, e.g. flyers)</label>
-        <input type="text" id="new-id" class="form-input" placeholder="flyers" />
-        <label>Product name</label>
-        <input type="text" id="new-name" class="form-input" placeholder="Flyers" />
-        <label>Description</label>
-        <input type="text" id="new-desc" class="form-input" placeholder="Full-color flyers for events" />
-        <label>Emoji</label>
-        <input type="text" id="new-emoji" class="form-input" placeholder="📄" style="width:80px" />
-        <label>Base price ($)</label>
-        <input type="number" id="new-price" class="form-input" placeholder="12.99" step="0.01" style="width:120px" />
-        <label>Status</label>
-        <select id="new-status" class="form-input" style="width:160px">
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-ghost" onclick="document.getElementById('modal-overlay').style.display='none'">Cancel</button>
-        <button class="btn-primary" onclick="saveNewProduct()">Create product</button>
       </div>
     </div>
   </div>
@@ -281,6 +265,39 @@
     </div>
   </div>
 
+  <!-- ADD PRODUCT MODAL -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="closeModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add new product</h3>
+        <button class="modal-close" onclick="document.getElementById('modal-overlay').style.display='none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <label>Product ID (no spaces)</label>
+        <input type="text" id="new-id" class="form-input" placeholder="e.g. flyers" />
+        <label>Product name</label>
+        <input type="text" id="new-name" class="form-input" placeholder="Flyers" />
+        <label>Description</label>
+        <input type="text" id="new-desc" class="form-input" placeholder="Full-color flyers for events" />
+        <label>Emoji</label>
+        <input type="text" id="new-emoji" class="form-input" placeholder="📄" style="width:80px" />
+        <label>Base price ($)</label>
+        <input type="number" id="new-price" class="form-input" placeholder="12.99" step="0.01" style="width:140px" />
+        <label>Status</label>
+        <select id="new-status" class="form-input" style="width:160px">
+          <option value="draft">Draft</option>
+          <option value="active">Active</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="document.getElementById('modal-overlay').style.display='none'">Cancel</button>
+        <button class="btn-primary" onclick="saveNewProduct()">Create product</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="pricing-file-input" accept=".xlsx" style="display:none" onchange="handlePricingUpload(this)">
+
   <!-- TOAST -->
   <div id="toast" class="toast" style="display:none"></div>
 
@@ -288,5 +305,45 @@
   <script src="src/app.js"></script>
   <script src="src/editor.js"></script>
   <script src="src/studio.js"></script>
+  <script>
+    // ── Admin login (simple password protection) ───────────────────────────
+    const ADMIN_USER = 'admin';
+    const ADMIN_PASS = 'pagaprint2025'; // Change this to your own password
+
+    function showAdminLogin() {
+      showPage('admin-login');
+    }
+
+    function checkAdminLogin() {
+      const u = document.getElementById('admin-user').value.trim();
+      const p = document.getElementById('admin-pass').value;
+      const err = document.getElementById('admin-login-error');
+      if (u === ADMIN_USER && p === ADMIN_PASS) {
+        err.style.display = 'none';
+        sessionStorage.setItem('pp_admin', '1');
+        showPage('admin');
+        loadAdmin();
+      } else {
+        err.style.display = 'block';
+      }
+    }
+
+    function adminLogout() {
+      sessionStorage.removeItem('pp_admin');
+      showPage('home');
+    }
+
+    // Override showPage to protect admin
+    const _origShowPage = showPage;
+    window.showPage = function(name) {
+      if (name === 'admin') {
+        if (!sessionStorage.getItem('pp_admin')) {
+          _origShowPage('admin-login');
+          return;
+        }
+      }
+      _origShowPage(name);
+    };
+  </script>
 </body>
 </html>
