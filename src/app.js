@@ -169,9 +169,10 @@ function renderOptions() {
       // choices are objects: { label, price }
       choices.forEach((c, i) => {
         const chip = document.createElement('div');
-        chip.className = 'chip' + (i === 1 ? ' active' : '');
+        const isDefault = (i === 0);
+        chip.className = 'chip' + (isDefault ? ' active' : '');
         chip.textContent = c.label;
-        if (i === 1) { selections[opt.label] = c.label; selections['_price'] = c.price; }
+        if (isDefault) { selections[opt.label] = c.label; selections['_price'] = c.price; }
         chip.onclick = () => {
           chips.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
           chip.classList.add('active');
@@ -183,7 +184,7 @@ function renderOptions() {
         chips.appendChild(chip);
       });
       // Init price-note
-      const defaultQty = choices[1] || choices[0];
+      const defaultQty = choices[0];
       if (defaultQty) document.getElementById('price-note').textContent = 'for ' + defaultQty.label;
       group.appendChild(chips);
 
@@ -215,26 +216,34 @@ function updateLivePrice() {
 
 // Look up price from PRICING_TABLE using all selected options
 function getVariantPrice() {
-  const qty   = parseInt((selections['Quantity'] || '100').toString().replace(/[^0-9]/g,'')) || 100;
-  const paper = (selections['Paper Stock'] || 'Matte').toLowerCase();
-  const corner= (selections['Corners'] || 'Standard').toLowerCase();
-  const sides = (selections['Print Sides'] || 'Front Only').toLowerCase();
+  // Parse qty — selections['Quantity'] is stored as "100", "300" etc.
+  const qtyRaw = String(selections['Quantity'] || '100').replace(/[^0-9]/g, '');
+  const qty    = parseInt(qtyRaw) || 100;
 
-  // Build variant key matching Excel: BC-[MA/GL]-[ST/RO]-[FO/FB]-[qty]
-  const paperCode  = paper.includes('gloss') ? 'GL' : 'MA';
+  const paper  = String(selections['Paper Stock'] || 'Matte').toLowerCase();
+  const corner = String(selections['Corners']     || 'Standard').toLowerCase();
+  const sides  = String(selections['Print Sides'] || 'Front Only').toLowerCase();
+
+  // Build variant key matching Excel format: BC-[MA/GL][ST/RO][FO/FB]-[qty]
+  const paperCode  = paper.includes('gloss')  ? 'GL' : 'MA';
   const cornerCode = corner.includes('round') ? 'RO' : 'ST';
-  const sidesCode  = sides.includes('back')   ? 'FB' : 'FO';
+  const sidesCode  = (sides.includes('back') || sides.includes('front & back') || sides.includes('both')) ? 'FB' : 'FO';
   const variantKey = `BC-${paperCode}${cornerCode}${sidesCode}-${qty}`;
 
-  // Check variant-level pricing table first
+  console.log('Variant lookup:', variantKey, '| VARIANT_PRICING keys:', Object.keys(VARIANT_PRICING).length);
+
+  // Check variant-level pricing table first (populated from uploaded Excel)
   if (VARIANT_PRICING[variantKey]) {
     const v = VARIANT_PRICING[variantKey];
-    return (OFFER_ACTIVE && v.offer && v.offer < v.base) ? v.offer : v.base;
+    const price = (OFFER_ACTIVE && v.offer && v.offer < v.base) ? v.offer : v.base;
+    console.log('Variant price found:', price);
+    return price;
   }
 
   // Fall back to qty-only pricing from PRICING_TABLE
   const base  = PRICING_TABLE.base[qty]  || 9.99;
   const offer = PRICING_TABLE.offer[qty] || base;
+  console.log('Fallback price for qty', qty, ':', base, '/ offer:', offer);
   return (OFFER_ACTIVE && offer < base) ? offer : base;
 }
 
