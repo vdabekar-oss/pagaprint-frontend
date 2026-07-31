@@ -42,16 +42,18 @@ function renderEditorBody() {
   body.innerHTML = `
     <div class="ed-top-fields">
       <div class="ed-field">
-        <label>Base price ($)</label>
-        <input type="number" value="${Number(p.base_price).toFixed(2)}" step="0.01" style="width:110px"
-          oninput="editorProduct.base_price = parseFloat(this.value) || 0">
-      </div>
-      <div class="ed-field">
         <label>Status</label>
         <select onchange="editorProduct.status = this.value">
           <option ${p.status === 'active' ? 'selected' : ''} value="active">Active</option>
           <option ${p.status === 'draft'  ? 'selected' : ''} value="draft">Draft</option>
         </select>
+      </div>
+      <div class="ed-field" style="flex:1">
+        <label>Pricing</label>
+        <div style="font-size:13px;color:#0070ba;font-weight:500;padding:7px 0">
+          Base price is set via <strong>Upload pricing sheet</strong> in the Products table.
+          Upload your Excel file to update prices for all variants.
+        </div>
       </div>
     </div>
 
